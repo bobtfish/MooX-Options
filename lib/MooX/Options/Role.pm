@@ -47,8 +47,8 @@ sub import {
         ## no critic qw(ProhibitPackageVars)
         my $option_meth_name = $caller::MooX_Options_Option_Name;
         ## use critic
-        croak "MooX::Options should be import before using this role" unless defined $option_meth_name;
-        my $option_meth = $caller->can($option_meth_name);
+        my $option_meth;
+        croak "MooX::Options should be import before using this role." unless defined $option_meth_name and $option_meth = $caller->can($option_meth_name);;
         for my $name(keys %Options) {
             my %option = %{$Options{$name}};
             $option_meth->($name, %option);

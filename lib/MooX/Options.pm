@@ -16,7 +16,6 @@ use warnings;
 
 # VERSION
 use Carp;
-use Data::Dumper;
 use Getopt::Long 2.38;
 use Getopt::Long::Descriptive 0.091;
 use Regexp::Common;
@@ -55,9 +54,9 @@ sub import {
     my $Usage                = "";
 
     my $sub_ref = {};
-
+    $import_options{usage_method_name} = $import_options{option_method_name} . '_usage';
     #keywords option
-    $sub_ref->{$import_options{option_method_name}} = sub {
+    $sub_ref->{option_method} = sub {
         my ( $name, %orig_options ) = @_;
         my %options = %orig_options;
         croak
@@ -125,14 +124,14 @@ sub import {
     };
 
     #keyword option_usage
-    $sub_ref->{$import_options{option_method_name}."_usage"} = sub {
+    $sub_ref->{usage_method} = sub {
         my ( $code, @messages ) = @_;
         print join( "\n", @messages, $Usage );
         exit($code);
     };
 
     #keyword new_with_options
-    $sub_ref->{$import_options{creation_method_name}} = sub {
+    $sub_ref->{creation_method} = sub {
         my ( $self, %params ) = @_;
 
         #ensure all method will be call properly
@@ -205,9 +204,12 @@ sub import {
     {
         ## no critic qw(ProhibitNoStrict)
         no strict qw/refs/;
-        for my $meth(keys %$sub_ref) {
-            *{"${caller}::$meth"} = $sub_ref->{$meth};
-        }
+        *{ $caller . '::' . $import_options{$_ . '_name'} } = $sub_ref->{$_}
+            for qw/
+                creation_method
+                option_method
+                usage_method
+            /;
         ## use critic
 
         #Save option name for MooX::Options::Role
