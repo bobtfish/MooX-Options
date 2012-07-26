@@ -21,6 +21,11 @@ use Getopt::Long::Descriptive 0.091;
 use Regexp::Common;
 use Data::Record;
 
+BEGIN {
+    *subname = eval { require Sub::Name; 1 } ?
+        \&Sub::Name::subname : sub { shift(); shift; };
+}
+
 my %DEFAULT_OPTIONS = (
     'creation_chain_method' => 'new',
     'creation_method_name'  => 'new_with_options',
@@ -133,7 +138,7 @@ sub import {
     };
 
     #keyword new_with_options
-    $sub_ref->{creation_method} = sub {
+    $sub_ref->{creation_method} = subname "${caller}::${ \$import_options{creation_method_name} }" => sub {
         my ( $self, %params ) = @_;
 
         #ensure all method will be call properly
