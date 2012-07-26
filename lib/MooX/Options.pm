@@ -30,6 +30,8 @@ my %DEFAULT_OPTIONS = (
     'protect_argv'          => 1,
 );
 
+our %METHODS_GENERATED;
+
 my @FILTER = qw/format short repeatable negativable autosplit doc/;
 
 ## no critic qw(ProhibitExcessComplexity)
@@ -53,7 +55,7 @@ sub import {
     my %Autosplit_Attributes = ();
     my $Usage                = "";
 
-    my $sub_ref = {};
+    my $sub_ref = $METHODS_GENERATED{$caller} ||= {};
     $import_options{usage_method_name} = $import_options{option_method_name} . '_usage';
     #keywords option
     $sub_ref->{option_method} = sub {
@@ -67,7 +69,7 @@ sub import {
         croak "Can't use option with "
             . $import_options{option_method_name}
             . "_usage, it is implied by MooX::Options"
-            if $name eq $import_options{option_method_name} 
+            if $name eq $import_options{option_method_name}
                 . "_usage";
 
         #fix missing option, autosplit implie repeatable
@@ -210,11 +212,6 @@ sub import {
                 option_method
                 usage_method
             /;
-        ## use critic
-
-        #Save option name for MooX::Options::Role
-        ## no critic qw(ProhibitPackageVars)
-        $caller::MooX_Options_Option_Name = $import_options{option_method_name};
         ## use critic
     }
 
