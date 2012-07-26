@@ -27,12 +27,13 @@ BEGIN {
 }
 
 my %DEFAULT_OPTIONS = (
-    'creation_chain_method' => 'new',
-    'creation_method_name'  => 'new_with_options',
-    'option_chain_method'   => 'has',
-    'option_method_name'    => 'option',
-    'flavour'               => [],
-    'protect_argv'          => 1,
+    'creation_chain_method'         => 'new',
+    'creation_method_name'          => 'new_with_options',
+    'prepare_arguments_method_name' => 'prepare_arguments_with_getopt'
+    'option_chain_method'           => 'has',
+    'option_method_name'            => 'option',
+    'flavour'                       => [],
+    'protect_argv'                  => 1,
 );
 
 our %METHODS_GENERATED;
@@ -62,6 +63,7 @@ sub import {
 
     my $sub_ref = $METHODS_GENERATED{$caller} ||= {};
     $import_options{usage_method_name} = $import_options{option_method_name} . '_usage';
+
     #keywords option
     $sub_ref->{option_method} = sub {
         my ( $name, %orig_options ) = @_;
@@ -137,8 +139,8 @@ sub import {
         exit($code);
     };
 
-    #keyword new_with_options
-    $sub_ref->{creation_method} = subname "${caller}::${ \$import_options{creation_method_name} }" => sub {
+    #keyword prepare_arguments_with_getopt
+    $sub_ref->{prepare_arguments_method} = subname "${caller}::${ \$import_options{prepare_arguments_method_name} }" sub {
         my ( $self, %params ) = @_;
 
         #ensure all method will be call properly
@@ -202,6 +204,24 @@ sub import {
         $usage_method->( 1, map {"$_ is missing"} @missing_params )
         if @missing_params;
 
+        return %params;
+    };
+
+    #keyword new_with_options
+    $sub_ref->{creation_method} = subname "${caller}::${ \$import_options{creation_method_name} }" => sub {
+        my ( $self, %params ) = @_;
+
+        #ensure all method will be call properly
+        for my $attr (@Attributes) {
+            croak "attribute "
+            . $attr
+            . " isn't defined. You have something wrong in your option_chain_method '"
+            . $import_options{option_chain_method} . "'."
+            unless $self->can($attr);
+        }
+
+        %params = $self->prepare_arguments_with_getopt(%params);
+
         my $creation_method_name = $import_options{creation_chain_method};
         my $creation_method      = $caller->can($creation_method_name);
         $creation_method->( $self, %params );
@@ -216,6 +236,7 @@ sub import {
                 creation_method
                 option_method
                 usage_method
+                prepare_arguments_method
             /;
         ## use critic
     }
@@ -256,6 +277,10 @@ call this method to create the attribute, default : has
 name of keyword you want to use to create your option, default : option
 
 it will create ${option_method_name}_usage too, ex: option_usage($exit_code, @{additional messages})
+
+=item prepare_arguments_method_name
+
+name of keyword you want to use to do the actual parsing and return options, default : prepare_arguments_with_getopt
 
 =item nofilter
 
